@@ -45,7 +45,7 @@ export default function WardrobeOutfitRecommendations({ wardrobeItems = [], user
           </div>
 
           <span className="text-xs font-bold text-fitted-brown bg-fitted-bg px-3 py-1.5 rounded-full border border-fitted-border">
-            {outfitData.recommendations.length} Valid Combinations
+            {outfitData.recommendations.length > 0 ? `${outfitData.recommendations.length} Top Combos` : 'No Combos Yet'}
           </span>
         </div>
 

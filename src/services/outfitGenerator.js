@@ -117,6 +117,11 @@ const OCCASION_CONFIGS = [
   }
 ];
 
+// Minimum items needed before the engine will generate any combos
+const MIN_WARDROBE_ITEMS = 3;
+const MIN_COMBO_SCORE = 85;
+const MAX_COMBOS = 8;
+
 // Main Reusable Generator Function
 export function generateOutfitRecommendations(wardrobeItems = [], userPreferences = {}, targetOccasion = 'All') {
   if (!Array.isArray(wardrobeItems) || wardrobeItems.length === 0) {
@@ -124,6 +129,15 @@ export function generateOutfitRecommendations(wardrobeItems = [], userPreference
       recommendations: [],
       hasInsufficientItems: true,
       missingMessage: 'Your wardrobe vault is empty. Digitize your clothes to generate 1-click outfit combos!'
+    };
+  }
+
+  // Require a minimum number of real clothing pieces before generating any combos
+  if (wardrobeItems.length < MIN_WARDROBE_ITEMS) {
+    return {
+      recommendations: [],
+      hasInsufficientItems: true,
+      missingMessage: `You only have ${wardrobeItems.length} item${wardrobeItems.length === 1 ? '' : 's'} in your vault. Add at least ${MIN_WARDROBE_ITEMS} clothing pieces to unlock full outfit combinations!`
     };
   }
 
@@ -253,9 +267,25 @@ export function generateOutfitRecommendations(wardrobeItems = [], userPreference
   // Sort by compatibility score descending
   generatedCombos.sort((a, b) => b.score - a.score);
 
+  // Deduplicate by item-pair key so the same physical items don't appear across multiple occasions
+  const seenItemKeys = new Set();
+  const deduped = [];
+  for (const combo of generatedCombos) {
+    const itemKey = combo.items.map(i => i.id).sort().join('-');
+    if (!seenItemKeys.has(itemKey)) {
+      seenItemKeys.add(itemKey);
+      deduped.push(combo);
+    }
+  }
+
+  // Only surface combos that meet the minimum quality bar
+  const qualified = deduped.filter(c => c.score >= MIN_COMBO_SCORE);
+
   return {
-    recommendations: generatedCombos.slice(0, 16),
-    hasInsufficientItems: false,
-    missingMessage: null
+    recommendations: qualified.slice(0, MAX_COMBOS),
+    hasInsufficientItems: qualified.length === 0,
+    missingMessage: qualified.length === 0
+      ? 'No high-quality outfit matches found for this occasion yet. Try adding more variety to your wardrobe — different colors, tops, and shoes help a lot!'
+      : null
   };
 }
