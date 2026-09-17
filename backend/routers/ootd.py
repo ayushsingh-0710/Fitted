@@ -128,22 +128,55 @@ class GeminiVisionFashionService:
                 img_data = base64.b64decode(clean_b64)
                 img = Image.open(io.BytesIO(img_data)).convert("RGB").resize((64, 64))
                 
-                # Check overall image standard deviation and skin tone presence to detect blank walls/ceilings
+                # ──── Signal 1: Luminance Standard Deviation ────
                 all_pixels = [img.getpixel((x, y)) for x in range(64) for y in range(64)]
                 lumas = [0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2] for p in all_pixels]
                 mean_luma = sum(lumas) / len(lumas)
                 variance = sum((l - mean_luma) ** 2 for l in lumas) / len(lumas)
                 std_dev = variance ** 0.5
 
+                # ──── Signal 2: Skin-tone Pixel Percentage ────
                 skin_pixels = 0
                 for p in all_pixels:
                     r, g, b = p
-                    if r > 60 and g > 40 and b > 20 and (r - g) >= 10 and (r - b) >= 14 and (0.299 * r + 0.587 * g + 0.114 * b) > 40:
+                    luma = 0.299 * r + 0.587 * g + 0.114 * b
+                    if r > 60 and g > 40 and b > 20 and (r - g) >= 10 and (r - b) >= 14 and luma > 40 and luma < 240:
                         skin_pixels += 1
                 skin_pct = (skin_pixels / len(all_pixels)) * 100
 
-                # If the image is a flat wall, ceiling, or empty room without people or clothes
-                if std_dev < 22 and skin_pct < 1.2:
+                # ──── Signal 3: Color Channel Diversity (unique hue buckets) ────
+                color_buckets = set()
+                for i in range(0, len(all_pixels), 4):  # sample every 4th pixel
+                    p = all_pixels[i]
+                    rb = p[0] // 32
+                    gb = p[1] // 32
+                    bb = p[2] // 32
+                    color_buckets.add((rb, gb, bb))
+                color_diversity = len(color_buckets)
+
+                # ──── Signal 4: Edge Density (gradient magnitude) ────
+                edge_count = 0
+                for y in range(1, 63):
+                    for x in range(1, 63):
+                        idx = y * 64 + x
+                        gx = abs(lumas[idx] - lumas[idx + 1])
+                        gy = abs(lumas[idx] - lumas[idx + 64])
+                        if gx + gy > 20:
+                            edge_count += 1
+                edge_density = edge_count / (62 * 62)
+
+                # ──── Voting: Must pass at least 2 of 4 checks ────
+                valid_votes = 0
+                if std_dev >= 35:
+                    valid_votes += 1           # Real outfits have high luminance variance
+                if skin_pct >= 3:
+                    valid_votes += 1            # Person visible = skin tone pixels
+                if color_diversity >= 25:
+                    valid_votes += 1            # Outfits have diverse color regions
+                if edge_density >= 0.12:
+                    valid_votes += 1            # Clothing has edges (seams, folds, patterns)
+
+                if valid_votes < 2:
                     return {
                         "isValidOutfit": False,
                         "errorMessage": "No person or clothing detected in this photo. It appears to be an empty wall, ceiling, or background. Please snap or upload a picture of yourself wearing an outfit, or clothing laid out flat!",

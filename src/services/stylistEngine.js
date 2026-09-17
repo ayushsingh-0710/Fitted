@@ -22,41 +22,73 @@ export async function extractImageVisualFeatures(imageBase64) {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, 64, 64);
 
-        // 1. Calculate overall standard deviation and skin-tone presence across entire image
         const fullData = ctx.getImageData(0, 0, 64, 64).data;
-        let totalLuma = 0;
-        let skinPixels = 0;
-        const lumas = [];
         const pixelCount = fullData.length / 4;
 
+        // ──── Signal 1: Luminance Standard Deviation ────
+        let totalLuma = 0;
+        const lumas = [];
         for (let i = 0; i < fullData.length; i += 4) {
-          const r = fullData[i];
-          const g = fullData[i + 1];
-          const b = fullData[i + 2];
-          const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+          const luma = 0.299 * fullData[i] + 0.587 * fullData[i + 1] + 0.114 * fullData[i + 2];
           lumas.push(luma);
           totalLuma += luma;
-
-          // Human skin tone bounds across ethnicities
-          if (r > 60 && g > 40 && b > 20 && (r - g) >= 10 && (r - b) >= 14 && luma > 40 && luma < 240) {
-            skinPixels++;
-          }
         }
-
         const meanLuma = totalLuma / pixelCount;
         let varianceSum = 0;
         for (let i = 0; i < pixelCount; i++) {
           varianceSum += (lumas[i] - meanLuma) * (lumas[i] - meanLuma);
         }
         const stdDev = Math.sqrt(varianceSum / pixelCount);
+
+        // ──── Signal 2: Skin-tone Pixel Percentage ────
+        let skinPixels = 0;
+        for (let i = 0; i < fullData.length; i += 4) {
+          const r = fullData[i], g = fullData[i + 1], b = fullData[i + 2];
+          const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+          if (r > 60 && g > 40 && b > 20 && (r - g) >= 10 && (r - b) >= 14 && luma > 40 && luma < 240) {
+            skinPixels++;
+          }
+        }
         const skinPercent = (skinPixels / pixelCount) * 100;
 
-        // If the photo is a blank wall, ceiling, floor, or empty background
-        if (stdDev < 22 && skinPercent < 1.2) {
+        // ──── Signal 3: Color Channel Diversity (unique hue clusters) ────
+        const colorBuckets = new Set();
+        for (let i = 0; i < fullData.length; i += 16) { // sample every 4th pixel
+          const rBucket = Math.floor(fullData[i] / 32);
+          const gBucket = Math.floor(fullData[i + 1] / 32);
+          const bBucket = Math.floor(fullData[i + 2] / 32);
+          colorBuckets.add(`${rBucket}_${gBucket}_${bBucket}`);
+        }
+        const colorDiversity = colorBuckets.size;
+
+        // ──── Signal 4: Edge Density (gradient magnitude) ────
+        let edgeCount = 0;
+        for (let y = 1; y < 63; y++) {
+          for (let x = 1; x < 63; x++) {
+            const idx = (y * 64 + x) * 4;
+            const idxRight = (y * 64 + x + 1) * 4;
+            const idxBelow = ((y + 1) * 64 + x) * 4;
+            const gx = Math.abs(lumas[(y * 64 + x)] - lumas[(y * 64 + x + 1)]);
+            const gy = Math.abs(lumas[(y * 64 + x)] - lumas[((y + 1) * 64 + x)]);
+            if (gx + gy > 20) edgeCount++;
+          }
+        }
+        const edgeDensity = edgeCount / (62 * 62); // 0 to 1
+
+        // ──── Voting: Image must pass at least 2 of 4 checks ────
+        let validVotes = 0;
+        if (stdDev >= 35) validVotes++;         // Real outfits have high luminance variance
+        if (skinPercent >= 3) validVotes++;      // Person visible = skin tone pixels
+        if (colorDiversity >= 25) validVotes++;  // Outfits have diverse color regions
+        if (edgeDensity >= 0.12) validVotes++;   // Clothing has edges (seams, folds, patterns)
+
+        const isValid = validVotes >= 2;
+
+        if (!isValid) {
           resolve({
             hasImage: true,
             isValidOutfit: false,
-            errorMessage: "No person or clothing detected in this photo. It appears to be an empty wall, ceiling, or background. Please snap or upload a picture of yourself wearing an outfit, or clothing laid out flat!"
+            errorMessage: "I can't see a person or clothing in this photo — it looks like it might be a wall, ceiling, or empty background. Please take a picture of yourself wearing an outfit, or lay your clothes out flat and snap a photo!"
           });
           return;
         }
@@ -87,7 +119,6 @@ export async function extractImageVisualFeatures(imageBase64) {
 
         let profile = 'GENERAL_SMART_CASUAL';
         if (avgTopLuma > 135 && avgBtmLuma < 90) {
-          // Light top (e.g. white/cream shirt) with dark trousers/bottoms (e.g. black pants)
           profile = 'LIGHT_TOP_DARK_BOTTOM';
         } else if (avgTopLuma < 80 && avgBtmLuma < 80) {
           profile = 'ALL_DARK_MONOCHROME';
