@@ -9,7 +9,8 @@ import {
   CheckCircle2, 
   Bot, 
   RotateCcw, 
-  Shirt 
+  Shirt,
+  AlertCircle
 } from 'lucide-react';
 
 export default function OotdPage() {
@@ -235,6 +236,58 @@ export default function OotdPage() {
           )}
 
           {analysisResult && (
+            analysisResult.isValidOutfit === false ? (
+              <div className="bg-white rounded-3xl p-8 space-y-6 border border-amber-200 shadow-cream-card animate-in fade-in text-center">
+                <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto">
+                  <AlertCircle className="w-8 h-8" />
+                </div>
+
+                <div className="space-y-2 max-w-md mx-auto">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100/60 text-amber-800 text-[11px] font-bold uppercase tracking-wider">
+                    <span>Validation Check</span>
+                  </div>
+                  <h3 className="text-2xl font-display font-bold text-fitted-charcoal">
+                    No Person or Outfit Detected
+                  </h3>
+                  <p className="text-xs text-fitted-muted leading-relaxed">
+                    {analysisResult.errorMessage}
+                  </p>
+                </div>
+
+                <div className="bg-fitted-bg rounded-2xl p-4 border border-fitted-border max-w-md mx-auto space-y-2 text-left text-xs">
+                  <p className="font-bold text-fitted-charcoal flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-fitted-brown" />
+                    <span>Stylist Camera Tips:</span>
+                  </p>
+                  <ul className="space-y-1.5 text-fitted-muted list-disc list-inside">
+                    <li>Point the camera at yourself or stand in front of a mirror.</li>
+                    <li>Ensure both your top (shirt) and bottom (trousers/skirt) are in view.</li>
+                    <li>Avoid pointing the camera directly at empty walls, ceilings, or blank floors.</li>
+                  </ul>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                  <button
+                    onClick={() => setIsCameraOpen(true)}
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-fitted-brown text-white text-xs font-bold hover:bg-fitted-brownDark transition-all flex items-center justify-center gap-2 shadow-glow-brown"
+                  >
+                    <Camera className="w-4 h-4" />
+                    <span>Snap Photo with Camera</span>
+                  </button>
+
+                  <label className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-fitted-border text-fitted-charcoal text-xs font-bold hover:bg-fitted-bg transition-colors cursor-pointer flex items-center justify-center gap-2">
+                    <Upload className="w-4 h-4 text-fitted-brown" />
+                    <span>Upload New Photo</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              </div>
+            ) : (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
               
               {/* Main Score Header */}
@@ -348,7 +401,7 @@ export default function OotdPage() {
               </div>
 
             </div>
-          )}
+          ))}
 
         </div>
 

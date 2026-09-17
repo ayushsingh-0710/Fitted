@@ -22,7 +22,46 @@ export async function extractImageVisualFeatures(imageBase64) {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, 64, 64);
 
-        // Sample Top/Torso Zone (y from 15 to 35)
+        // 1. Calculate overall standard deviation and skin-tone presence across entire image
+        const fullData = ctx.getImageData(0, 0, 64, 64).data;
+        let totalLuma = 0;
+        let skinPixels = 0;
+        const lumas = [];
+        const pixelCount = fullData.length / 4;
+
+        for (let i = 0; i < fullData.length; i += 4) {
+          const r = fullData[i];
+          const g = fullData[i + 1];
+          const b = fullData[i + 2];
+          const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+          lumas.push(luma);
+          totalLuma += luma;
+
+          // Human skin tone bounds across ethnicities
+          if (r > 60 && g > 40 && b > 20 && (r - g) >= 10 && (r - b) >= 14 && luma > 40 && luma < 240) {
+            skinPixels++;
+          }
+        }
+
+        const meanLuma = totalLuma / pixelCount;
+        let varianceSum = 0;
+        for (let i = 0; i < pixelCount; i++) {
+          varianceSum += (lumas[i] - meanLuma) * (lumas[i] - meanLuma);
+        }
+        const stdDev = Math.sqrt(varianceSum / pixelCount);
+        const skinPercent = (skinPixels / pixelCount) * 100;
+
+        // If the photo is a blank wall, ceiling, floor, or empty background
+        if (stdDev < 22 && skinPercent < 1.2) {
+          resolve({
+            hasImage: true,
+            isValidOutfit: false,
+            errorMessage: "No person or clothing detected in this photo. It appears to be an empty wall, ceiling, or background. Please snap or upload a picture of yourself wearing an outfit, or clothing laid out flat!"
+          });
+          return;
+        }
+
+        // 2. Sample Top/Torso Zone (y from 15 to 35)
         const topData = ctx.getImageData(16, 15, 32, 20).data;
         let topR = 0, topG = 0, topB = 0, topCount = 0;
         for (let i = 0; i < topData.length; i += 4) {
@@ -33,7 +72,7 @@ export async function extractImageVisualFeatures(imageBase64) {
         }
         const avgTopLuma = (0.299 * (topR / topCount)) + (0.587 * (topG / topCount)) + (0.114 * (topB / topCount));
 
-        // Sample Bottom/Legs Zone (y from 38 to 58)
+        // 3. Sample Bottom/Legs Zone (y from 38 to 58)
         const btmData = ctx.getImageData(16, 38, 32, 20).data;
         let btmR = 0, btmG = 0, btmB = 0, btmCount = 0;
         for (let i = 0; i < btmData.length; i += 4) {
@@ -47,7 +86,7 @@ export async function extractImageVisualFeatures(imageBase64) {
         const contrast = avgTopLuma - avgBtmLuma;
 
         let profile = 'GENERAL_SMART_CASUAL';
-        if (avgTopLuma > 140 && avgBtmLuma < 90) {
+        if (avgTopLuma > 135 && avgBtmLuma < 90) {
           // Light top (e.g. white/cream shirt) with dark trousers/bottoms (e.g. black pants)
           profile = 'LIGHT_TOP_DARK_BOTTOM';
         } else if (avgTopLuma < 80 && avgBtmLuma < 80) {
@@ -62,16 +101,17 @@ export async function extractImageVisualFeatures(imageBase64) {
 
         resolve({
           hasImage: true,
+          isValidOutfit: true,
           profile,
           topBrightness: Math.round(avgTopLuma),
           bottomBrightness: Math.round(avgBtmLuma),
           contrastRatio: Number((avgTopLuma / Math.max(avgBtmLuma, 1)).toFixed(2))
         });
       };
-      img.onerror = () => resolve({ hasImage: false, profile: 'GENERAL_SMART_CASUAL' });
+      img.onerror = () => resolve({ hasImage: false, isValidOutfit: true, profile: 'GENERAL_SMART_CASUAL' });
       img.src = imageBase64;
     } catch {
-      resolve({ hasImage: false, profile: 'GENERAL_SMART_CASUAL' });
+      resolve({ hasImage: false, isValidOutfit: true, profile: 'GENERAL_SMART_CASUAL' });
     }
   });
 }
@@ -213,6 +253,21 @@ export async function generateStylistAnalysis(payload = {}) {
 
   // 1. Analyze image visual features
   const visualFeatures = await extractImageVisualFeatures(imageBase64);
+
+  // If user uploaded a custom image and no person or clothing was detected
+  if (visualFeatures.hasImage && visualFeatures.isValidOutfit === false) {
+    return {
+      isValidOutfit: false,
+      errorMessage: visualFeatures.errorMessage,
+      suggestions: [
+        "Point the camera directly towards yourself or stand in front of a mirror.",
+        "Ensure your full outfit (shirt and trousers) is framed in the shot.",
+        "Make sure the area has adequate room lighting or natural light."
+      ],
+      aiEngine: "Fitted Human & Garment Vision Validator",
+      analyzedAt: new Date().toISOString()
+    };
+  }
 
   // 2. Select matching archetype
   const archetypeKey = visualFeatures.profile in STYLIST_KNOWLEDGE_BASE 

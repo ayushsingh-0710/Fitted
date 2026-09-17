@@ -43,9 +43,18 @@ class GeminiVisionFashionService:
                 mime_type = "image/webp"
 
         prompt = (
-            "You are an experienced, warm, and friendly celebrity personal fashion stylist giving a private styling consultation. "
+            "You are an experienced celebrity personal fashion stylist giving a private styling consultation. "
+            "STEP 1: INSPECT FOR PERSON OR CLOTHING. "
+            "Look at the image carefully. Does it actually contain a person, human subject, or clothing/outfit? "
+            "If the photo shows ONLY a blank wall, ceiling, empty room, background, floor, or random objects with NO person and NO clothing, "
+            "you MUST return strictly valid JSON matching this exact structure:\n"
+            "{\n"
+            '  "isValidOutfit": false,\n'
+            '  "errorMessage": "No person or clothing detected in this photo. It appears to be a wall, ceiling, or background. Please snap or upload a picture of yourself wearing an outfit, or clothing laid out flat!"\n'
+            "}\n\n"
+            "STEP 2: FULL STYLIST REVIEW (Only if person or clothing is present):\n"
             "Speak directly to your client in SIMPLE, NATURAL, EVERYDAY LANGUAGE. "
-            "STRICT RULE: Avoid robotic academic jargon (never say 'monochromatic visual length extension', 'trapezoid profile', or 'grounding undertones'). "
+            "STRICT RULE: Avoid robotic academic jargon. "
             "Look closely at what the person is wearing in the picture:\n"
             "1. Identify the shirt/top style (collar, sleeves, color, stripes/pattern).\n"
             "2. Identify the trousers/bottoms (color, cut, fit).\n"
@@ -54,8 +63,9 @@ class GeminiVisionFashionService:
             "5. Occasion Match (where this outfit shines: cafes, college, casual office, dates, dinners).\n"
             "6. 3 genuine outfit strengths (what makes this look great).\n"
             "7. 3 realistic, high-impact stylist upgrades (specific footwear like white sneakers vs loafers, watch/sunglasses, tucking/cuffing tricks).\n\n"
-            "Return strictly valid JSON only with NO markdown formatting matching this exact structure:\n"
+            "Return strictly valid JSON only matching this structure:\n"
             "{\n"
+            '  "isValidOutfit": true,\n'
             '  "overallScore": <integer 86-96>,\n'
             '  "verdict": "<catchy, warm 3-5 word style verdict like Crisp Black & White Resort Casual>",\n'
             '  "breakdown": {\n'
@@ -118,6 +128,33 @@ class GeminiVisionFashionService:
                 img_data = base64.b64decode(clean_b64)
                 img = Image.open(io.BytesIO(img_data)).convert("RGB").resize((64, 64))
                 
+                # Check overall image standard deviation and skin tone presence to detect blank walls/ceilings
+                all_pixels = [img.getpixel((x, y)) for x in range(64) for y in range(64)]
+                lumas = [0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2] for p in all_pixels]
+                mean_luma = sum(lumas) / len(lumas)
+                variance = sum((l - mean_luma) ** 2 for l in lumas) / len(lumas)
+                std_dev = variance ** 0.5
+
+                skin_pixels = 0
+                for p in all_pixels:
+                    r, g, b = p
+                    if r > 60 and g > 40 and b > 20 and (r - g) >= 10 and (r - b) >= 14 and (0.299 * r + 0.587 * g + 0.114 * b) > 40:
+                        skin_pixels += 1
+                skin_pct = (skin_pixels / len(all_pixels)) * 100
+
+                # If the image is a flat wall, ceiling, or empty room without people or clothes
+                if std_dev < 22 and skin_pct < 1.2:
+                    return {
+                        "isValidOutfit": False,
+                        "errorMessage": "No person or clothing detected in this photo. It appears to be an empty wall, ceiling, or background. Please snap or upload a picture of yourself wearing an outfit, or clothing laid out flat!",
+                        "suggestions": [
+                            "Point the camera towards yourself or stand in front of a mirror.",
+                            "Make sure your shirt and trousers are visible in the frame.",
+                            "Ensure good room or daylight illumination."
+                        ],
+                        "aiEngine": "Fitted Human & Garment Vision Validator"
+                    }
+
                 # Sample top/torso (y from 15 to 35)
                 top_pixels = [img.getpixel((x, y)) for x in range(16, 48) for y in range(15, 35)]
                 avg_top_r = sum(p[0] for p in top_pixels) / len(top_pixels)
