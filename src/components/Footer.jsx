@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Sparkles, Shield, Cpu, CreditCard, ArrowRight, Globe, Share2, MessageSquare } from 'lucide-react';
+import { Cpu, CreditCard, ArrowRight } from 'lucide-react';
+
 
 export default function Footer() {
   return (

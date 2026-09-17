@@ -7,18 +7,15 @@ import {
   Shirt, 
   Plus, 
   Search, 
-  Filter, 
   Trash2, 
   RotateCcw, 
   Sparkles, 
   Check, 
   X,
-  Layers,
-  Tag,
-  Camera,
-  Upload,
-  RefreshCw,
-  Zap
+  Camera, 
+  Upload, 
+  RefreshCw, 
+  Zap 
 } from 'lucide-react';
 
 const AI_SAMPLE_DETECTIONS = [

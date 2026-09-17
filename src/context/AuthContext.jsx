@@ -6,22 +6,36 @@ const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
+    const isLoggedOut = localStorage.getItem('fitted_logged_out') === 'true';
+    if (isLoggedOut) return null;
+
     const saved = localStorage.getItem('fitted_user');
     if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed.name === 'Alex Vance' || !parsed.name) {
-        return { ...parsed, name: 'Dixita Mishra', email: 'dixita.mishra@fitted.ai' };
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.name === 'Alex Vance' || !parsed.name) {
+          return { ...parsed, name: 'Dixita Mishra', email: 'dixita.mishra@fitted.ai' };
+        }
+        return parsed;
+      } catch {
+        return null;
       }
-      return parsed;
     }
     return MOCK_USER;
   });
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    const isLoggedOut = localStorage.getItem('fitted_logged_out') === 'true';
+    if (isLoggedOut) return false;
+    return true;
+  });
+
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
       localStorage.setItem('fitted_user', JSON.stringify(user));
+      localStorage.removeItem('fitted_logged_out');
     } else {
       localStorage.removeItem('fitted_user');
     }
@@ -30,6 +44,7 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     setLoading(true);
     try {
+      localStorage.removeItem('fitted_logged_out');
       const res = await api.auth.login(email, password);
       if (res.user) {
         setUser(res.user);
@@ -44,6 +59,7 @@ export function AuthProvider({ children }) {
   const register = async (name, email, password) => {
     setLoading(true);
     try {
+      localStorage.removeItem('fitted_logged_out');
       const res = await api.auth.register(name, email, password);
       if (res.user) {
         setUser(res.user);
@@ -56,9 +72,10 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
+    localStorage.setItem('fitted_logged_out', 'true');
+    localStorage.removeItem('fitted_user');
     setUser(null);
     setIsAuthenticated(false);
-    localStorage.removeItem('fitted_user');
   };
 
   const updateUserProfile = (updatedFields) => {

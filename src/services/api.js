@@ -1,4 +1,4 @@
-import { MOCK_USER, MOCK_WARDROBE, MOCK_RECOMMENDATIONS, MOCK_OOTD_ANALYSIS } from '../data/mockData';
+import { MOCK_USER, MOCK_WARDROBE, MOCK_RECOMMENDATIONS } from '../data/mockData';
 import { recommendProductsFromCatalog } from './catalogRecommendationEngine';
 import { INDIAN_WOMENS_FASHION_CATALOG } from '../data/indianWomensFashionCatalog';
 
@@ -26,7 +26,7 @@ async function fetchWithFallback(url, options = {}, mockFallback) {
       console.warn(`[Fitted API] Backend returned status ${response.status}. Using fallback mock data.`);
       return mockFallback();
     }
-  } catch (error) {
+  } catch {
     console.info(`[Fitted API Layer] Standalone/Demo mode active. Serving intelligent mock response.`);
     return mockFallback();
   }

@@ -73,9 +73,11 @@ export default function CameraModal({ isOpen, onClose, onCapture, title = "Captu
       startCameraStream();
     } else if (!isOpen) {
       stopStream();
-      setCapturedImage(null);
-      setCameraError('');
-      setIsVirtualMode(false);
+      queueMicrotask(() => {
+        setCapturedImage(null);
+        setCameraError('');
+        setIsVirtualMode(false);
+      });
     } else if (isVirtualMode) {
       stopStream();
     }

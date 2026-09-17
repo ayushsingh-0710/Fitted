@@ -16,7 +16,6 @@ import {
   Menu, 
   X,
   Home,
-  CheckCircle2,
   SlidersHorizontal,
   Sun,
   CloudRain,

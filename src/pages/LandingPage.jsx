@@ -1,24 +1,19 @@
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { 
   Sparkles, 
   ArrowRight, 
   Shirt, 
   Compass, 
   SlidersHorizontal, 
-  Zap, 
-  ShieldCheck, 
   CheckCircle2, 
   Star,
-  Layers,
-  Palette,
   Bot
 } from 'lucide-react';
 
 export default function LandingPage() {
-  const navigate = useNavigate();
-
   return (
+
     <div className="space-y-24 pb-16 overflow-hidden bg-[#FAF6ED]">
       
       {/* Hero Section */}

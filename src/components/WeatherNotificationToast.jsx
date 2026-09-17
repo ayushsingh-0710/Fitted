@@ -4,10 +4,8 @@ import { useNotifications } from '../context/NotificationContext';
 import { 
   Sun, 
   CloudRain, 
-  Sparkles, 
   X, 
   ArrowRight, 
-  Thermometer, 
   Shirt 
 } from 'lucide-react';
 

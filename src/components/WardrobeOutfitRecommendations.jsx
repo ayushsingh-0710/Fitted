@@ -3,13 +3,8 @@ import { generateOutfitRecommendations } from '../services/outfitGenerator';
 import { 
   Sparkles, 
   Shirt, 
-  Check, 
-  ArrowRight, 
-  Layers, 
   RotateCcw, 
   Plus, 
-  Info,
-  Calendar,
   Zap,
   CheckCircle2
 } from 'lucide-react';

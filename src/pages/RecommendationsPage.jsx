@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MOCK_RECOMMENDATIONS } from '../data/mockData';
 import { recommendProductsFromCatalog } from '../services/catalogRecommendationEngine';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -8,7 +7,6 @@ import { useWardrobe } from '../context/WardrobeContext';
 import WardrobeOutfitRecommendations from '../components/WardrobeOutfitRecommendations';
 import { api } from '../services/api';
 import { 
-  SlidersHorizontal, 
   Sparkles, 
   ShoppingBag, 
   ArrowRight, 
@@ -18,7 +16,6 @@ import {
   DollarSign,
   ShieldAlert,
   Calendar,
-  Key,
   Bot,
   RefreshCw,
   Sliders,
@@ -27,12 +24,10 @@ import {
   ChevronDown,
   ChevronUp,
   X,
-  Tag,
-  Building,
-  Award,
-  Layers,
-  Heart
+  Building
 } from 'lucide-react';
+
+const PREFERRED_FABRICS = ['100% Organic Cotton', 'Cashmere', 'Mulberry Silk'];
 
 export default function RecommendationsPage() {
   const navigate = useNavigate();
@@ -48,10 +43,10 @@ export default function RecommendationsPage() {
 
   // Body Suitability Inputs
   const [useSavedProfile, setUseSavedProfile] = useState(true);
-  const [customBodyType, setCustomBodyType] = useState('Athletic Trapezoid');
-  const [customHeight, setCustomHeight] = useState("5'11\" (180 cm)");
-  const [customChest, setCustomChest] = useState("39 in");
-  const [customWaist, setCustomWaist] = useState("31 in");
+  const [customBodyType, setCustomBodyType] = useState(() => user?.bodyType || 'Athletic Trapezoid');
+  const [customHeight, setCustomHeight] = useState(() => user?.height || "5'11\" (180 cm)");
+  const [customChest, setCustomChest] = useState(() => user?.chest || "39 in");
+  const [customWaist, setCustomWaist] = useState(() => user?.waist || "31 in");
   const [customShoulder, setCustomShoulder] = useState("18.5 in");
   const [fitPreference, setFitPreference] = useState("Tailored / Structured");
 
@@ -62,7 +57,7 @@ export default function RecommendationsPage() {
   // Fabric specs & Excluded Allergies
   const availableFabrics = ['Wool', 'Polyester', 'Synthetic', 'Latex', 'Leather', 'Linen', 'Silk', 'Nylon', 'Down / Feathers'];
   const [excludedFabrics, setExcludedFabrics] = useState(['Wool']);
-  const [preferredFabrics, setPreferredFabrics] = useState(['100% Organic Cotton', 'Cashmere', 'Mulberry Silk']);
+
 
   // Occasion & Wardrobe Pairing
   const occasionsList = [
@@ -86,32 +81,7 @@ export default function RecommendationsPage() {
   const [activeModalProduct, setActiveModalProduct] = useState(null);
   const [selectedModalSize, setSelectedModalSize] = useState('');
 
-  // Pre-fill user profile data & generate initial catalog recommendations
-  useEffect(() => {
-    if (user && useSavedProfile) {
-      if (user.bodyType) setCustomBodyType(user.bodyType);
-      if (user.height) setCustomHeight(user.height);
-      if (user.chest) setCustomChest(user.chest);
-      if (user.waist) setCustomWaist(user.waist);
-    }
-    handleGenerateRecommendations();
-  }, [user, wardrobeItems]);
-
-  // Categories & Brand lists
-  const categories = ['All', 'Kurti', 'Top', 'T-Shirt', 'Jeans', 'Trousers', 'Dress', 'Co-ord Set', 'Jacket', 'Sneakers', 'Flats'];
-  
-  // Extract unique partner brands from recommendations
-  const allBrands = ['All', ...Array.from(new Set(partnerProducts.map(p => p.brand).filter(Boolean)))];
-
-  const toggleExcludedFabric = (fabric) => {
-    if (excludedFabrics.includes(fabric)) {
-      setExcludedFabrics(excludedFabrics.filter(f => f !== fabric));
-    } else {
-      setExcludedFabrics([...excludedFabrics, fabric]);
-    }
-  };
-
-  const handleGenerateRecommendations = async () => {
+  const handleGenerateRecommendations = useCallback(async () => {
     setLoading(true);
     try {
       const payload = {
@@ -130,7 +100,7 @@ export default function RecommendationsPage() {
           maxPrice: Number(maxPrice)
         },
         fabricSpecs: {
-          preferences: preferredFabrics,
+          preferences: PREFERRED_FABRICS,
           allergiesOrExclusions: excludedFabrics
         },
         occasion: selectedOccasion,
@@ -143,9 +113,47 @@ export default function RecommendationsPage() {
         setAiSource(response.source || "Fitted Indian Women's Fashion AI Engine");
       }
     } catch (err) {
-      console.error('Error generating partner recommendations:', err);
+      console.warn("Recommendations generation fallback:", err);
+      setPartnerProducts(recommendProductsFromCatalog(wardrobeItems, user));
     } finally {
       setLoading(false);
+    }
+  }, [
+    wardrobeItems,
+    customBodyType,
+    customHeight,
+    customChest,
+    useSavedProfile,
+    user,
+    customWaist,
+    customShoulder,
+    fitPreference,
+    minPrice,
+    maxPrice,
+    excludedFabrics,
+    selectedOccasion,
+    selectedClosetItemId
+  ]);
+
+  // Skip redundant initial effect execution since state is already pre-seeded
+  const isFirstMount = React.useRef(true);
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+    handleGenerateRecommendations();
+  }, [handleGenerateRecommendations]);
+
+  // Categories & Brand lists
+  const categories = ['All', 'Kurti', 'Top', 'T-Shirt', 'Jeans', 'Trousers', 'Dress', 'Co-ord Set', 'Jacket', 'Sneakers', 'Flats'];
+  const allBrands = ['All', ...Array.from(new Set(partnerProducts.map(p => p.brand).filter(Boolean)))];
+
+  const toggleExcludedFabric = (fabric) => {
+    if (excludedFabrics.includes(fabric)) {
+      setExcludedFabrics(excludedFabrics.filter(f => f !== fabric));
+    } else {
+      setExcludedFabrics([...excludedFabrics, fabric]);
     }
   };
 
@@ -323,6 +331,15 @@ export default function RecommendationsPage() {
                           <option value="Oval / Rounded">Oval / Rounded</option>
                         </select>
                       </div>
+                      <div>
+                        <label className="text-[10px] text-fitted-muted uppercase font-semibold">Height</label>
+                        <input
+                          type="text"
+                          value={customHeight}
+                          onChange={(e) => setCustomHeight(e.target.value)}
+                          className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-fitted-border text-fitted-charcoal outline-none focus:border-fitted-brown"
+                        />
+                      </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <label className="text-[10px] text-fitted-muted uppercase font-semibold">Chest</label>
@@ -341,6 +358,30 @@ export default function RecommendationsPage() {
                             onChange={(e) => setCustomWaist(e.target.value)}
                             className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-fitted-border text-fitted-charcoal outline-none focus:border-fitted-brown"
                           />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-fitted-muted uppercase font-semibold">Shoulder Width</label>
+                          <input
+                            type="text"
+                            value={customShoulder}
+                            onChange={(e) => setCustomShoulder(e.target.value)}
+                            className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-fitted-border text-fitted-charcoal outline-none focus:border-fitted-brown"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-fitted-muted uppercase font-semibold">Fit Preference</label>
+                          <select
+                            value={fitPreference}
+                            onChange={(e) => setFitPreference(e.target.value)}
+                            className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-fitted-border text-fitted-charcoal outline-none focus:border-fitted-brown"
+                          >
+                            <option value="Tailored / Structured">Tailored</option>
+                            <option value="Relaxed / Oversized">Relaxed</option>
+                            <option value="Slim Fit">Slim Fit</option>
+                            <option value="Regular Classic">Regular</option>
+                          </select>
                         </div>
                       </div>
                     </div>
@@ -368,8 +409,34 @@ export default function RecommendationsPage() {
                     </div>
 
                     <div className="space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-fitted-muted">Min Price (₹)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            max={maxPrice}
+                            step="500"
+                            value={minPrice}
+                            onChange={(e) => setMinPrice(Number(e.target.value))}
+                            className="w-full px-2.5 py-1 rounded-lg bg-white border border-fitted-border text-fitted-charcoal text-xs outline-none focus:border-fitted-brown"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-fitted-muted">Max Cap (₹)</label>
+                          <input
+                            type="number"
+                            min={minPrice}
+                            max="100000"
+                            step="1000"
+                            value={maxPrice}
+                            onChange={(e) => setMaxPrice(Number(e.target.value))}
+                            className="w-full px-2.5 py-1 rounded-lg bg-white border border-fitted-border text-fitted-charcoal text-xs outline-none focus:border-fitted-brown"
+                          />
+                        </div>
+                      </div>
                       <div>
-                        <label className="text-[10px] text-fitted-muted">Max Spending Cap (₹)</label>
+                        <label className="text-[10px] text-fitted-muted">Max Spending Cap Slider (₹)</label>
                         <input
                           type="range"
                           min="1000"
@@ -383,6 +450,7 @@ export default function RecommendationsPage() {
                     </div>
                   </div>
                 </div>
+
 
                 <p className="text-[10px] text-fitted-muted">Filters multi-brand product recommendations to stay within your spending comfort zone.</p>
               </div>

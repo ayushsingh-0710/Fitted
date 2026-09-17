@@ -197,6 +197,8 @@ class GeminiVisionFashionService:
             "aiEngine": "Fitted Dynamic Multimodal Vision Engine"
         }
 
+from backend.database import db_manager
+
 gemini_service = GeminiVisionFashionService()
 
 @router.post("/analyze")
@@ -212,7 +214,23 @@ async def analyze_ootd(payload: OotdAnalysisPayload):
         # Fallback to Dynamic Image Feature Analyzer
         analysis = gemini_service.analyze_dynamically(image_b64, payload.itemIds or [])
 
-    return {
+    result = {
         **analysis,
-        "timestamp": datetime.datetime.utcnow().isoformat()
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
     }
+
+    if db_manager.is_connected and db_manager.db is not None:
+        try:
+            # Strip heavy base64 before logging history to MongoDB
+            log_record = {
+                **analysis,
+                "timestamp": result["timestamp"],
+                "itemIds": payload.itemIds or [],
+                "hasCustomImage": payload.hasCustomImage
+            }
+            await db_manager.db["ootd_history"].insert_one(log_record)
+        except Exception as e:
+            print(f"[OOTD MongoDB History Error]: {e}")
+
+    return result
+

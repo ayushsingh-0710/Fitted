@@ -1,13 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { CheckCircle2, Sparkles, ArrowRight, Package, ShieldCheck, Home } from 'lucide-react';
+import { CheckCircle2, Sparkles, Package, Home } from 'lucide-react';
 
 export default function OrderSuccessPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const transaction = location.state?.transaction;
 
-  const txnId = transaction?.transactionId || `TXN_${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+  const [txnId] = useState(() => transaction?.transactionId || `TXN_FTD_${Date.now().toString(36).toUpperCase()}`);
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-16 text-center space-y-8 min-h-[70vh]">
@@ -49,7 +49,7 @@ export default function OrderSuccessPage() {
 
         <div className="p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200/60 space-y-1">
           <p className="text-fitted-brown font-bold text-[11px] flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-fitted-gold" />
+            <Sparkles className="w-3.5 h-3.5 text-fitted-brown" />
             Automatic Wardrobe Sync
           </p>
           <p className="text-gray-700 text-[11px] leading-relaxed">
@@ -62,7 +62,7 @@ export default function OrderSuccessPage() {
       <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
         <button
           onClick={() => navigate('/wardrobe')}
-          className="w-full sm:w-auto px-6 py-3.5 rounded-full bg-fitted-brown text-white font-bold text-xs uppercase tracking-wider hover:bg-fitted-dark-brown transition-all flex items-center justify-center gap-2 shadow-md"
+          className="w-full sm:w-auto px-6 py-3.5 rounded-full bg-fitted-brown text-white font-bold text-xs uppercase tracking-wider hover:bg-fitted-brownDark transition-all flex items-center justify-center gap-2 shadow-md"
         >
           <Package className="w-4 h-4" />
           <span>View Digital Closet</span>

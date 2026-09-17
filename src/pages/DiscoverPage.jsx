@@ -4,12 +4,9 @@ import {
   Compass, 
   Sparkles, 
   Flame, 
-  Check, 
   ArrowRight, 
-  Layers, 
-  SlidersHorizontal,
   Bot,
-  X
+  Sparkle
 } from 'lucide-react';
 
 export default function DiscoverPage() {
@@ -106,29 +103,51 @@ export default function DiscoverPage() {
 
       {/* Occasion & Vibe Filters */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold text-fitted-charcoal flex items-center gap-2">
+        <div>
+          <h3 className="text-sm font-bold text-fitted-charcoal flex items-center gap-2 mb-2">
             <Flame className="w-4 h-4 text-fitted-brown" />
             <span>Filter by Occasion</span>
           </h3>
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+            {occasions.map((occ) => (
+              <button
+                key={occ}
+                onClick={() => setActiveOccasion(occ)}
+                className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                  activeOccasion === occ
+                    ? 'bg-fitted-brown text-white font-bold shadow-sm'
+                    : 'bg-white text-fitted-muted border border-fitted-border hover:text-fitted-charcoal'
+                }`}
+              >
+                {occ}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto pb-2">
-          {occasions.map((occ) => (
-            <button
-              key={occ}
-              onClick={() => setActiveOccasion(occ)}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                activeOccasion === occ
-                  ? 'bg-fitted-brown text-white font-bold shadow-sm'
-                  : 'bg-white text-fitted-muted border border-fitted-border hover:text-fitted-charcoal'
-              }`}
-            >
-              {occ}
-            </button>
-          ))}
+        <div>
+          <h3 className="text-sm font-bold text-fitted-charcoal flex items-center gap-2 mb-2">
+            <Sparkle className="w-4 h-4 text-fitted-brown" />
+            <span>Aesthetic Vibe</span>
+          </h3>
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+            {vibes.map((vibe) => (
+              <button
+                key={vibe}
+                onClick={() => setActiveVibe(vibe)}
+                className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                  activeVibe === vibe
+                    ? 'bg-fitted-brown text-white font-bold shadow-sm'
+                    : 'bg-white text-fitted-muted border border-fitted-border hover:text-fitted-charcoal'
+                }`}
+              >
+                {vibe}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
+
 
       {/* Curated Lookbooks Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

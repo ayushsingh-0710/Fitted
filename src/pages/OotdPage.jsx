@@ -8,16 +8,12 @@ import {
   Camera, 
   CheckCircle2, 
   Bot, 
-  Sliders, 
   RotateCcw, 
-  Shirt, 
-  AlertCircle,
-  ArrowRight,
-  TrendingUp,
-  Video
+  Shirt 
 } from 'lucide-react';
 
 export default function OotdPage() {
+
   const { items } = useWardrobe();
   const [selectedItems, setSelectedItems] = useState(['w_01', 'w_03', 'w_04']);
   const [imagePreview, setImagePreview] = useState(null);

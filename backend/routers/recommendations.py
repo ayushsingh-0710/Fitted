@@ -334,7 +334,8 @@ async def get_product_by_id(prod_id: str):
     for prod in RECOMMENDATIONS_STORE:
         if prod["id"] == prod_id:
             return prod
-    return RECOMMENDATIONS_STORE[0]
+    raise HTTPException(status_code=404, detail=f"Product with ID '{prod_id}' not found in store catalog")
+
 
 @router.post("/recommendations/partner-suggest")
 async def suggest_partner_products(payload: PartnerSuggestPayload):

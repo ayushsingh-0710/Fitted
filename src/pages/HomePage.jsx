@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useWardrobe } from '../context/WardrobeContext';
@@ -8,21 +8,15 @@ import { fetchRealtimeWeather } from '../services/weatherService';
 import { 
   Sparkles, 
   Shirt, 
-  Compass, 
   ArrowRight, 
   Sun, 
-  CloudRain,
-  CloudSun,
-  Cloud,
   CheckCircle2, 
   TrendingUp, 
   Upload, 
-  SlidersHorizontal,
-  Plus,
-  MapPin,
-  RefreshCw,
-  Wind,
-  Bell
+  Plus, 
+  MapPin, 
+  RefreshCw, 
+  Bell 
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -38,16 +32,19 @@ export default function HomePage() {
   const [weatherData, setWeatherData] = useState(null);
   const [isWeatherLoading, setIsWeatherLoading] = useState(true);
 
-  const loadWeather = async (cityToFetch) => {
+  const loadWeather = useCallback(async (cityToFetch) => {
     setIsWeatherLoading(true);
-    const data = await fetchRealtimeWeather(cityToFetch || selectedCity);
-    setWeatherData(data);
-    setIsWeatherLoading(false);
-  };
+    try {
+      const data = await fetchRealtimeWeather(cityToFetch || selectedCity);
+      setWeatherData(data);
+    } finally {
+      setIsWeatherLoading(false);
+    }
+  }, [selectedCity]);
 
   useEffect(() => {
     loadWeather('New Delhi');
-  }, []);
+  }, [loadWeather]);
 
   const handleCityChange = (e) => {
     const newCity = e.target.value;
@@ -62,7 +59,6 @@ export default function HomePage() {
         async (position) => {
           const { latitude, longitude } = position.coords;
           try {
-            const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${latitude},${longitude}&count=1`);
             const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
             const data = await weatherRes.json();
             const current = data.current_weather || {};
@@ -73,7 +69,7 @@ export default function HomePage() {
               temperature: temp,
               fetchedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             }));
-          } catch (e) {
+          } catch {
             loadWeather('Mumbai');
           } finally {
             setIsWeatherLoading(false);

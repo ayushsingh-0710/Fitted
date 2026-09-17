@@ -10,15 +10,10 @@ import {
   CheckCircle2, 
   ShieldCheck, 
   CreditCard, 
-  Zap, 
-  Crown, 
   Star, 
-  Video, 
-  MessageSquare,
-  ArrowRight,
-  ChevronRight,
   Check
 } from 'lucide-react';
+
 
 export default function StylistBookingPage() {
   const navigate = useNavigate();

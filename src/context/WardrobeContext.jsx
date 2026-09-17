@@ -13,7 +13,7 @@ export function WardrobeProvider({ children }) {
       try {
         const data = await api.wardrobe.getItems();
         setItems(data || MOCK_WARDROBE);
-      } catch (err) {
+      } catch {
         setItems(MOCK_WARDROBE);
       } finally {
         setLoading(false);
