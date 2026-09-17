@@ -1,6 +1,7 @@
 import { MOCK_USER, MOCK_WARDROBE, MOCK_RECOMMENDATIONS } from '../data/mockData';
 import { recommendProductsFromCatalog } from './catalogRecommendationEngine';
 import { INDIAN_WOMENS_FASHION_CATALOG } from '../data/indianWomensFashionCatalog';
+import { generateStylistAnalysis } from './stylistEngine';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
@@ -24,11 +25,11 @@ async function fetchWithFallback(url, options = {}, mockFallback) {
       return await response.json();
     } else {
       console.warn(`[Fitted API] Backend returned status ${response.status}. Using fallback mock data.`);
-      return mockFallback();
+      return await mockFallback();
     }
   } catch {
     console.info(`[Fitted API Layer] Standalone/Demo mode active. Serving intelligent mock response.`);
-    return mockFallback();
+    return await mockFallback();
   }
 }
 
@@ -75,119 +76,7 @@ export const api = {
       return fetchWithFallback(
         `${API_BASE_URL}/ootd/analyze`,
         { method: 'POST', body: JSON.stringify(payload) },
-        () => {
-          const imageStr = payload.imageBase64 || '';
-          const itemIds = payload.itemIds || [];
-          
-          // Generate deterministic seed from payload string
-          let hash = 0;
-          const seedStr = (imageStr ? imageStr.slice(0, 300) : '') + itemIds.join('-');
-          for (let i = 0; i < seedStr.length; i++) {
-            hash = (hash << 5) - hash + seedStr.charCodeAt(i);
-            hash |= 0;
-          }
-          const seed = Math.abs(hash);
-
-          const verdicts = [
-            'Contemporary Earthy Smart Casual',
-            'High-Contrast Modern Urban Silhouette',
-            'Relaxed Linen & Tapered Proportion',
-            'Tailored Luxe Evening Ensemble',
-            'Minimalist Monochrome Streetwear',
-            'Textured Heritage Layered Fit',
-            'Sophisticated Warm Palette Coordination'
-          ];
-
-          const colorFeedbacks = [
-            'Strong visual color grounding. Contrast ratio balances skin undertones with garment contrast.',
-            'Subtle monochromatic depth with rich texture separation between top and bottom pieces.',
-            'Harmonious warm tone distribution creating effortless visual height and natural warmth.',
-            'Bold complementary accenting. The neutral base accentuates subtle accessory lines perfectly.'
-          ];
-
-          const fitFeedbacks = [
-            'Ideal shoulder-to-waist drop ratio framing an athletic trapezoid profile.',
-            'Clean drop shoulder line balancing cropped hem length and ankle exposure.',
-            'Structured chest tailoring providing crisp drape without excess fabric bunching.',
-            'Rule of thirds proportions with tapered ankle hem creating elongated leg lines.'
-          ];
-
-          const occasionFeedbacks = [
-            'Versatile transition fit ideal for Creative Office, Dinner Drinks, or Evening Socials.',
-            'Sophisticated smart casual balance suitable for Gallery Launches or Weekend Brunches.',
-            'Polished yet comfortable framing tailored for Travel Luxe or Fine Dining settings.',
-            'Modern urban street silhouette perfect for Evening Lounges or Casual Meetings.'
-          ];
-
-          const strengthsList = [
-            [
-              'Optimal rule of thirds silhouette balance',
-              'High-contrast neutral anchor framing face area',
-              'Crisp shoulder-to-waist taper without bunching'
-            ],
-            [
-              'Earthy natural color palette harmony',
-              'Textured fabric layering with clean drop shoulder',
-              'Proportional trouser crop accentuating footwear'
-            ],
-            [
-              'Monochromatic visual length extension',
-              'Subtle accessory accenting on wrist & collar',
-              'Effortless transition from day to evening wear'
-            ]
-          ];
-
-          const suggestionsList = [
-            [
-              'Swap sneakers for suede Chelsea boots if attending a formal evening event.',
-              'Add a minimal silver or gold chain watch to anchor the wrist line.'
-            ],
-            [
-              'Roll sleeve hem slightly to expose wrist line and enhance relaxed drape.',
-              'Pair with a textured leather belt matching footwear hardware.'
-            ],
-            [
-              'Layer an unbuttoned linen overshirt for breezy evening temperature drops.',
-              'Opt for invisible socks to maximize clean low-top shoe silhouette.'
-            ]
-          ];
-
-          const vIdx = seed % verdicts.length;
-          const cIdx = (seed >> 2) % colorFeedbacks.length;
-          const fIdx = (seed >> 4) % fitFeedbacks.length;
-          const oIdx = (seed >> 6) % occasionFeedbacks.length;
-          const sIdx = (seed >> 8) % strengthsList.length;
-          const sugIdx = (seed >> 10) % suggestionsList.length;
-
-          const colorScore = 85 + (seed % 14);
-          const fitScore = 84 + ((seed >> 3) % 15);
-          const occasionScore = 88 + ((seed >> 5) % 11);
-          const overallScore = Math.round((colorScore + fitScore + occasionScore) / 3);
-
-          return {
-            overallScore,
-            verdict: verdicts[vIdx],
-            breakdown: {
-              colorHarmony: {
-                score: colorScore,
-                feedback: colorFeedbacks[cIdx]
-              },
-              fitProportions: {
-                score: fitScore,
-                feedback: fitFeedbacks[fIdx]
-              },
-              occasionMatch: {
-                score: occasionScore,
-                feedback: occasionFeedbacks[oIdx]
-              }
-            },
-            strengths: strengthsList[sIdx],
-            suggestions: suggestionsList[sugIdx],
-            wearAgainPrompt: `You last logged this combination ${7 + (seed % 12)} days ago. Great rotation spacing!`,
-            analyzedAt: new Date().toISOString(),
-            inputMeta: payload
-          };
-        }
+        () => generateStylistAnalysis(payload)
       );
     }
   },

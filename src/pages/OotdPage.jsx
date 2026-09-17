@@ -44,11 +44,11 @@ export default function OotdPage() {
     setAnalysisResult(null);
 
     const steps = [
-      'Extracting clothing items & color palette...',
-      'Evaluating visual contrast against Warm Golden undertone...',
-      'Calculating proportion ratio for Athletic Trapezoid body profile...',
-      'Checking occasion appropriateness (Smart Casual / Dinner)...',
-      'Synthesizing final fashion intelligence report...'
+      'Inspecting shirt silhouette, collar cut & trouser drape...',
+      'Evaluating color contrast & fabric tones in natural light...',
+      'Checking torso-to-leg proportions and sleeve fit...',
+      'Matching outfit versatility across work, dinner & casual settings...',
+      'Formulating personal stylist recommendations & footwear pairings...'
     ];
 
     for (let i = 0; i < steps.length; i++) {
@@ -241,7 +241,14 @@ export default function OotdPage() {
               <div className="bg-white rounded-3xl p-8 space-y-6 border border-fitted-border shadow-cream-card">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-fitted-border pb-6">
                   <div>
-                    <span className="text-[10px] uppercase font-bold text-fitted-brown tracking-widest">Fashion Score</span>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] uppercase font-bold text-fitted-brown tracking-widest">
+                        Personal Stylist Verdict
+                      </span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                        Stylist Approved
+                      </span>
+                    </div>
                     <h2 className="text-3xl font-display font-bold text-fitted-charcoal">{analysisResult.verdict}</h2>
                   </div>
                   <div className="flex items-center gap-3 bg-fitted-bg px-5 py-3 rounded-2xl border border-fitted-border">
@@ -261,7 +268,7 @@ export default function OotdPage() {
                     <div className="w-full bg-white h-1.5 rounded-full overflow-hidden border border-fitted-border">
                       <div className="bg-fitted-brown h-full rounded-full" style={{ width: `${analysisResult.breakdown.colorHarmony.score}%` }}></div>
                     </div>
-                    <p className="text-[10px] text-fitted-muted leading-tight pt-1">{analysisResult.breakdown.colorHarmony.feedback}</p>
+                    <p className="text-[11px] text-fitted-charcoal/90 leading-relaxed pt-1">{analysisResult.breakdown.colorHarmony.feedback}</p>
                   </div>
 
                   <div className="p-4 rounded-2xl bg-fitted-bg border border-fitted-border space-y-2">
@@ -272,7 +279,7 @@ export default function OotdPage() {
                     <div className="w-full bg-white h-1.5 rounded-full overflow-hidden border border-fitted-border">
                       <div className="bg-fitted-teal h-full rounded-full" style={{ width: `${analysisResult.breakdown.fitProportions.score}%` }}></div>
                     </div>
-                    <p className="text-[10px] text-fitted-muted leading-tight pt-1">{analysisResult.breakdown.fitProportions.feedback}</p>
+                    <p className="text-[11px] text-fitted-charcoal/90 leading-relaxed pt-1">{analysisResult.breakdown.fitProportions.feedback}</p>
                   </div>
 
                   <div className="p-4 rounded-2xl bg-fitted-bg border border-fitted-border space-y-2">
@@ -283,7 +290,7 @@ export default function OotdPage() {
                     <div className="w-full bg-white h-1.5 rounded-full overflow-hidden border border-fitted-border">
                       <div className="bg-emerald-600 h-full rounded-full" style={{ width: `${analysisResult.breakdown.occasionMatch.score}%` }}></div>
                     </div>
-                    <p className="text-[10px] text-fitted-muted leading-tight pt-1">{analysisResult.breakdown.occasionMatch.feedback}</p>
+                    <p className="text-[11px] text-fitted-charcoal/90 leading-relaxed pt-1">{analysisResult.breakdown.occasionMatch.feedback}</p>
                   </div>
 
                 </div>
@@ -296,12 +303,12 @@ export default function OotdPage() {
                 <div className="glass-card rounded-3xl p-6 space-y-4">
                   <h3 className="text-sm font-bold text-fitted-charcoal flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>Outfit Strengths</span>
+                    <span>Stylist's Highlights (What Works)</span>
                   </h3>
-                  <ul className="space-y-2 text-xs">
+                  <ul className="space-y-2.5 text-xs">
                     {analysisResult.strengths.map((str, idx) => (
-                      <li key={idx} className="p-2.5 rounded-xl bg-fitted-bg border border-fitted-border text-fitted-charcoal flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 mt-1.5 shrink-0" />
+                      <li key={idx} className="p-3 rounded-xl bg-fitted-bg border border-fitted-border text-fitted-charcoal flex items-start gap-2.5 leading-relaxed">
+                        <span className="w-2 h-2 rounded-full bg-emerald-600 mt-1.5 shrink-0" />
                         <span>{str}</span>
                       </li>
                     ))}
@@ -311,13 +318,13 @@ export default function OotdPage() {
                 {/* AI Improvement Tips */}
                 <div className="glass-card rounded-3xl p-6 space-y-4">
                   <h3 className="text-sm font-bold text-fitted-charcoal flex items-center gap-2">
-                    <Bot className="w-4 h-4 text-fitted-brown" />
-                    <span>AI Upgrade Recommendations</span>
+                    <Sparkles className="w-4 h-4 text-fitted-brown" />
+                    <span>Stylist's Upgrades & Pro Tips</span>
                   </h3>
-                  <ul className="space-y-2 text-xs">
+                  <ul className="space-y-2.5 text-xs">
                     {analysisResult.suggestions.map((sug, idx) => (
-                      <li key={idx} className="p-2.5 rounded-xl bg-fitted-bg border border-fitted-border text-fitted-charcoal flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-fitted-brown mt-1.5 shrink-0" />
+                      <li key={idx} className="p-3 rounded-xl bg-fitted-bg border border-fitted-border text-fitted-charcoal flex items-start gap-2.5 leading-relaxed">
+                        <span className="w-2 h-2 rounded-full bg-fitted-brown mt-1.5 shrink-0" />
                         <span>{sug}</span>
                       </li>
                     ))}
