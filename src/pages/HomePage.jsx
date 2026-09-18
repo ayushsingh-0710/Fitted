@@ -29,6 +29,7 @@ export default function HomePage() {
 
   // Real-time Weather State
   const [selectedCity, setSelectedCity] = useState('New Delhi');
+  const [gpsCity, setGpsCity] = useState(null); // GPS-resolved city name (null = using dropdown)
   const [weatherData, setWeatherData] = useState(null);
   const [isWeatherLoading, setIsWeatherLoading] = useState(true);
 
@@ -49,7 +50,13 @@ export default function HomePage() {
   const handleCityChange = (e) => {
     const newCity = e.target.value;
     setSelectedCity(newCity);
+    setGpsCity(null); // Clear GPS when user picks manually
     loadWeather(newCity);
+  };
+
+  const handleClearGps = () => {
+    setGpsCity(null);
+    loadWeather(selectedCity);
   };
 
   const handleUseLiveLocation = () => {
@@ -66,14 +73,14 @@ export default function HomePage() {
           // Step 1: Reverse geocode coordinates to get city name
           let cityName = `${latitude.toFixed(2)}°N, ${longitude.toFixed(2)}°E`;
           try {
+            // Use Open-Meteo geocoding reverse search (more reliable from browsers than Nominatim)
             const reverseGeoRes = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`
+              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
             );
             if (reverseGeoRes.ok) {
               const geoData = await reverseGeoRes.json();
-              const addr = geoData.address || {};
-              const city = addr.city || addr.town || addr.village || addr.state_district || addr.state || '';
-              const country = addr.country_code ? addr.country_code.toUpperCase() : '';
+              const city = geoData.city || geoData.locality || geoData.principalSubdivision || '';
+              const country = geoData.countryCode || '';
               if (city) {
                 cityName = country ? `${city}, ${country}` : city;
               }
@@ -125,7 +132,7 @@ export default function HomePage() {
           }
 
           // Step 5: Update state with complete weather data
-          setSelectedCity(cityName);
+          setGpsCity(cityName);
           setWeatherData({
             success: true,
             city: cityName,
@@ -254,26 +261,40 @@ export default function HomePage() {
           <div className="flex items-center justify-between bg-fitted-bg p-2 rounded-xl border border-fitted-border">
             <div className="flex items-center gap-1.5 text-xs text-fitted-charcoal font-semibold">
               <MapPin className="w-3.5 h-3.5 text-fitted-brown shrink-0" />
-              <select
-                value={selectedCity}
-                onChange={handleCityChange}
-                className="bg-transparent font-bold text-fitted-charcoal focus:outline-none cursor-pointer text-xs"
-              >
-                <option value="New Delhi">New Delhi, IN</option>
-                <option value="Mumbai">Mumbai, IN</option>
-                <option value="Bengaluru">Bengaluru, IN</option>
-                <option value="Kolkata">Kolkata, IN</option>
-                <option value="Jaipur">Jaipur, IN</option>
-                <option value="London">London, UK</option>
-                <option value="New York">New York, US</option>
-              </select>
+              {gpsCity ? (
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-fitted-charcoal text-xs">{gpsCity}</span>
+                  <button
+                    onClick={handleClearGps}
+                    className="text-fitted-muted hover:text-fitted-brown text-xs font-bold leading-none"
+                    title="Switch back to city selector"
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : (
+                <select
+                  value={selectedCity}
+                  onChange={handleCityChange}
+                  className="bg-transparent font-bold text-fitted-charcoal focus:outline-none cursor-pointer text-xs"
+                >
+                  <option value="New Delhi">New Delhi, IN</option>
+                  <option value="Mumbai">Mumbai, IN</option>
+                  <option value="Bengaluru">Bengaluru, IN</option>
+                  <option value="Kolkata">Kolkata, IN</option>
+                  <option value="Jaipur">Jaipur, IN</option>
+                  <option value="London">London, UK</option>
+                  <option value="New York">New York, US</option>
+                </select>
+              )}
             </div>
             <button
               onClick={handleUseLiveLocation}
-              className="text-[10px] text-fitted-brown hover:underline font-bold"
+              disabled={isWeatherLoading}
+              className={`text-[10px] font-bold ${gpsCity ? 'text-emerald-600' : 'text-fitted-brown hover:underline'}`}
               title="Use GPS Location"
             >
-              GPS Location
+              {gpsCity ? '📍 Live' : 'GPS Location'}
             </button>
           </div>
 
