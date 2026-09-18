@@ -53,33 +53,108 @@ export default function HomePage() {
   };
 
   const handleUseLiveLocation = () => {
-    if (navigator.geolocation) {
-      setIsWeatherLoading(true);
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-          try {
-            const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
-            const data = await weatherRes.json();
-            const current = data.current_weather || {};
-            const temp = Math.round(current.temperature ?? 24);
-            setWeatherData(prev => ({
-              ...prev,
-              city: `My Location (${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°)`,
-              temperature: temp,
-              fetchedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            }));
-          } catch {
-            loadWeather('Mumbai');
-          } finally {
-            setIsWeatherLoading(false);
-          }
-        },
-        () => {
-          loadWeather('Mumbai');
-        }
-      );
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser.');
+      return;
     }
+
+    setIsWeatherLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          // Step 1: Reverse geocode coordinates to get city name
+          let cityName = `${latitude.toFixed(2)}°N, ${longitude.toFixed(2)}°E`;
+          try {
+            const reverseGeoRes = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`
+            );
+            if (reverseGeoRes.ok) {
+              const geoData = await reverseGeoRes.json();
+              const addr = geoData.address || {};
+              const city = addr.city || addr.town || addr.village || addr.state_district || addr.state || '';
+              const country = addr.country_code ? addr.country_code.toUpperCase() : '';
+              if (city) {
+                cityName = country ? `${city}, ${country}` : city;
+              }
+            }
+          } catch (geoErr) {
+            console.warn('[GPS] Reverse geocoding failed, using coordinates:', geoErr);
+          }
+
+          // Step 2: Fetch full weather data from Open-Meteo
+          const weatherRes = await fetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&hourly=relative_humidity_2m`
+          );
+          if (!weatherRes.ok) throw new Error(`Weather API HTTP ${weatherRes.status}`);
+
+          const data = await weatherRes.json();
+          const current = data.current_weather || {};
+          const temp = Math.round(current.temperature ?? 24);
+          const code = current.weathercode ?? 0;
+          const wind = Math.round(current.windspeed ?? 12);
+
+          // Step 3: Map weather code to condition
+          const WEATHER_CODE_MAP = {
+            0: 'Clear & Sunny', 1: 'Mainly Clear', 2: 'Partly Cloudy', 3: 'Overcast',
+            45: 'Foggy & Misty', 48: 'Rime Fog',
+            51: 'Light Drizzle', 53: 'Moderate Drizzle', 55: 'Dense Drizzle',
+            61: 'Slight Rain', 63: 'Moderate Rain', 65: 'Heavy Rain',
+            80: 'Rain Showers', 95: 'Thunderstorm'
+          };
+          const condition = WEATHER_CODE_MAP[code] || 'Clear & Mild';
+
+          // Step 4: Generate climate-tailored fashion advice
+          let advice = '';
+          let outfitCombo = '';
+          if (code >= 51 && code <= 95) {
+            advice = 'Rainy & damp conditions. Opt for water-resistant outerwear and weather-sealed footwear.';
+            outfitCombo = 'Weatherproof Tech Jacket + Tapered Denim + Gore-Tex Loafers';
+          } else if (temp >= 30) {
+            advice = 'Hot & humid climate. Wear breathable hand-loomed linen and moisture-wicking organic cotton.';
+            outfitCombo = 'Khadi Linen Cuban Shirt + Lightweight Chino Shorts';
+          } else if (temp >= 22) {
+            advice = 'Pleasant & mild climate. Ideal for effortless light layering with unstructured blazers.';
+            outfitCombo = 'Structured Charcoal Blazer + Off-White Oversized Tee';
+          } else if (temp >= 15) {
+            advice = 'Breezy & cool temperature. Layer crisp outerwear over soft knit bases.';
+            outfitCombo = 'Raw Denim Jacket + Heavyweight Cotton Crew + Pleated Trousers';
+          } else {
+            advice = 'Chilly & cold climate. Heavy wool layering and structured thermal outerwear recommended.';
+            outfitCombo = 'Velvet Luxe Overcoat + Cashmere Sweater + Leather Boots';
+          }
+
+          // Step 5: Update state with complete weather data
+          setSelectedCity(cityName);
+          setWeatherData({
+            success: true,
+            city: cityName,
+            temperature: temp,
+            windspeed: wind,
+            condition,
+            advice,
+            outfitCombo,
+            fetchedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          });
+        } catch (err) {
+          console.error('[GPS Weather] Failed:', err);
+          loadWeather(selectedCity);
+        } finally {
+          setIsWeatherLoading(false);
+        }
+      },
+      (error) => {
+        setIsWeatherLoading(false);
+        if (error.code === error.PERMISSION_DENIED) {
+          alert('Location access denied. Please enable location permissions in your browser settings and try again.');
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          alert('Unable to determine your location. Please try again or select a city manually.');
+        } else {
+          alert('Location request timed out. Please try again.');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
   };
 
   const handleSendClimateNotification = () => {
